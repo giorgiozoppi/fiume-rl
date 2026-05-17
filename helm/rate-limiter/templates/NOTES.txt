@@ -1,0 +1,31 @@
+Rate-limiter deployed successfully.
+
+  Release:   {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+  Algorithm: {{ .Values.server.config.algorithm }}
+  Replicas:  {{ .Values.server.replicas }}
+  etcd:      {{ if .Values.etcd.enabled }}enabled ({{ .Values.etcd.replicas }} nodes){{ else }}disabled (local in-memory store){{ end }}
+  Strict security (X-Rate-Hmac): {{ if .Values.server.strictSecurity.enabled }}ENABLED{{ else }}disabled{{ end }}
+
+TCP endpoint (FlatBuffers binary):
+  {{ include "rate-limiter.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.server.ports.tcp }}
+
+HTTP endpoint (rate-limit check + headers):
+  {{ include "rate-limiter.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.server.ports.http }}
+
+Quick smoke-test from inside the cluster:
+  kubectl -n {{ .Release.Namespace }} run smoke --rm -it --image=curlimages/curl --restart=Never -- \
+    curl -s -X POST http://{{ include "rate-limiter.fullname" . }}:{{ .Values.server.ports.http }}/check \
+         -H 'Content-Type: application/json' \
+         -d '{"client_id":"smoke","resource":"/test","cost":1}'
+{{- if .Values.server.strictSecurity.enabled }}
+{{- if not .Values.server.strictSecurity.existingSecret }}
+{{- if not .Values.server.strictSecurity.secret }}
+
+WARNING: strict_security is enabled but no HMAC secret is configured.
+  The server will omit X-Rate-Hmac headers until RATE_LIMIT_HMAC_SECRET is set.
+  Create a secret and set server.strictSecurity.existingSecret, or provide
+  server.strictSecurity.secret (dev only — do not commit secrets to values.yaml).
+{{- end }}
+{{- end }}
+{{- end }}

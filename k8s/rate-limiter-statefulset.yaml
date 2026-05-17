@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rate-limiter
+  namespace: rate-limiter
+spec:
+  serviceName: rate-limiter
+  replicas: 3                 # all replicas share state via etcd
+  selector:
+    matchLabels:
+      app: rate-limiter
+  template:
+    metadata:
+      labels:
+        app: rate-limiter
+    spec:
+      containers:
+        - name: rate-limiter
+          image: rate-limiter:latest   # built from this repo
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: tcp
+              containerPort: 9000
+            - name: http
+              containerPort: 8080
+          env:
+            - name: RATE_LIMIT_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rate-limiter-hmac
+                  key: RATE_LIMIT_HMAC_SECRET
+                  # optional: true lets the pod start even if the secret is absent;
+                  # the server will log a warning and omit X-Rate-Hmac headers.
+                  optional: true
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+          args: ["/app/config.yaml"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /check
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: rate-limiter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rate-limiter
+  namespace: rate-limiter
+spec:
+  selector:
+    app: rate-limiter
+  ports:
+    - name: tcp
+      port: 9000
+      targetPort: 9000
+    - name: http
+      port: 8080
+      targetPort: 8080

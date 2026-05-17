@@ -1,0 +1,30 @@
+server:
+  host: "0.0.0.0"
+  port: 9000       # binary FlatBuffers TCP
+  http_port: 8080  # HTTP API (X-RateLimit-* headers)
+  strict_security: false  # when true, adds X-Rate-Hmac to every HTTP response
+                          # signing key → env var RATE_LIMIT_HMAC_SECRET (never in this file)
+
+# Optional: remove this section to use a local in-memory store (single-node).
+# etcd:
+#   endpoints:
+#     - "http://etcd-0.etcd:2379"
+#     - "http://etcd-1.etcd:2379"
+#     - "http://etcd-2.etcd:2379"
+#   key_prefix: rate-limiting
+
+rate_limiter:
+  # Pick one: fixed_window | sliding_window_log | sliding_window_counter | token_bucket | leaky_bucket
+  algorithm: token_bucket
+
+  # ── fixed_window / sliding_window_log / sliding_window_counter ──────────────
+  max_requests: 10       # max allowed requests per window
+  window_secs: 1         # window size in seconds
+
+  # ── token_bucket ─────────────────────────────────────────────────────────────
+  bucket_capacity: 10    # max tokens a client can hold
+  refill_rate: 2.0       # tokens added per second
+
+  # ── leaky_bucket ─────────────────────────────────────────────────────────────
+  leak_rate: 2.0         # requests drained per second
+  queue_capacity: 10     # max inflight queue depth per client

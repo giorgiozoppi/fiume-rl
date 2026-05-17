@@ -1,0 +1,30 @@
+// FlatBuffers schema for the rate-limiting server wire protocol.
+// Compile with: flatc --rust -o src/flatbuf schema/messages.fbs
+
+namespace rate_limit;
+
+/// A rate-limit check request sent by a client over TCP.
+table RateLimitRequest {
+  /// Opaque identifier for the caller (IP, user-id, API key, …)
+  client_id : string (required);
+  /// The resource being accessed, e.g. "/api/v1/orders"
+  resource  : string;
+  /// How many units of capacity to consume (default 1)
+  cost      : uint32 = 1;
+}
+
+/// Server response to every RateLimitRequest.
+table RateLimitResponse {
+  /// true  → request is allowed to proceed
+  /// false → request must be dropped / retried
+  allowed         : bool   = false;
+  /// Remaining capacity after this request (tokens, slots, …)
+  remaining       : int64  = 0;
+  /// How many milliseconds the caller should wait before retrying.
+  /// 0 when allowed = true.
+  retry_after_ms  : int64  = 0;
+  /// Human-readable explanation of the decision.
+  reason          : string;
+}
+
+root_type RateLimitRequest;

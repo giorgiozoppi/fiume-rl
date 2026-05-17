@@ -1,0 +1,78 @@
+# ── rate-limiter server ────────────────────────────────────────────────────────
+server:
+  image:
+    repository: rate-limiter
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicas: 3
+
+  ports:
+    tcp: 9000   # FlatBuffers binary protocol
+    http: 8080  # HTTP API (X-RateLimit-* headers)
+
+  # ── algorithm config (rendered into config.yaml ConfigMap) ─────────────────
+  config:
+    # One of: fixed_window | sliding_window_log | sliding_window_counter |
+    #         token_bucket | leaky_bucket
+    algorithm: token_bucket
+
+    # fixed_window / sliding_window_*
+    maxRequests: 100
+    windowSecs: 1
+
+    # token_bucket
+    bucketCapacity: 100
+    refillRate: 10.0
+
+    # leaky_bucket
+    leakRate: 10.0
+    queueCapacity: 100
+
+  # ── strict security (X-Rate-Hmac response header) ─────────────────────────
+  strictSecurity:
+    enabled: false
+
+    # Option A — let the chart create a Secret from a literal value.
+    # Not recommended for production; use Option B instead.
+    secret: ""
+
+    # Option B — reference a Secret you manage externally (Sealed Secrets,
+    # External Secrets Operator, Vault, …).  When set, the chart does NOT
+    # create a Secret; it references this one directly.
+    existingSecret: ""
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# ── etcd ───────────────────────────────────────────────────────────────────────
+etcd:
+  # Set to false to use the local in-memory store (single-node, no persistence).
+  enabled: true
+
+  replicas: 3
+
+  image:
+    repository: quay.io/coreos/etcd
+    tag: v3.5.12
+
+  keyPrefix: rate-limiting
+
+  storage: 1Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ── name overrides ─────────────────────────────────────────────────────────────
+nameOverride: ""
+fullnameOverride: ""

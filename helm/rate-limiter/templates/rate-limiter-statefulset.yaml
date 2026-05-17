@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rate-limiter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rate-limiter.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  serviceName: {{ include "rate-limiter.fullname" . }}
+  replicas: {{ .Values.server.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rate-limiter.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        {{- include "rate-limiter.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+      annotations:
+        # Roll pods when the ConfigMap changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      containers:
+        - name: rate-limiter
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          args: ["/app/config.yaml"]
+          ports:
+            - name: tcp
+              containerPort: {{ .Values.server.ports.tcp }}
+            - name: http
+              containerPort: {{ .Values.server.ports.http }}
+          {{- if .Values.server.strictSecurity.enabled }}
+          env:
+            - name: RATE_LIMIT_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rate-limiter.hmacSecretName" . }}
+                  key: RATE_LIMIT_HMAC_SECRET
+                  # optional: pod starts even when the secret is absent;
+                  # the server logs a warning and omits X-Rate-Hmac headers.
+                  optional: true
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /check
+              port: {{ .Values.server.ports.http }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.server.ports.tcp }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "rate-limiter.fullname" . }}-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rate-limiter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rate-limiter.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  selector:
+    {{- include "rate-limiter.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+  ports:
+    - name: tcp
+      port: {{ .Values.server.ports.tcp }}
+      targetPort: tcp
+    - name: http
+      port: {{ .Values.server.ports.http }}
+      targetPort: http

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rate-limiter.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rate-limiter.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: {{ .Values.server.ports.tcp }}
+      http_port: {{ .Values.server.ports.http }}
+      strict_security: {{ .Values.server.strictSecurity.enabled }}
+    {{- if .Values.etcd.enabled }}
+
+    etcd:
+      endpoints:
+        {{- include "rate-limiter.etcdEndpoints" . | nindent 8 }}
+      key_prefix: {{ .Values.etcd.keyPrefix }}
+    {{- end }}
+
+    rate_limiter:
+      algorithm: {{ .Values.server.config.algorithm }}
+      max_requests: {{ .Values.server.config.maxRequests }}
+      window_secs: {{ .Values.server.config.windowSecs }}
+      bucket_capacity: {{ .Values.server.config.bucketCapacity }}
+      refill_rate: {{ .Values.server.config.refillRate }}
+      leak_rate: {{ .Values.server.config.leakRate }}
+      queue_capacity: {{ .Values.server.config.queueCapacity }}

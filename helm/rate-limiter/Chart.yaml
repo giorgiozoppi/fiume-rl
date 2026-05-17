@@ -1,0 +1,14 @@
+apiVersion: v2
+name: rate-limiter
+description: Distributed rate-limiting service (FlatBuffers TCP + HTTP) with optional etcd backend
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - rate-limiting
+  - etcd
+  - distributed
+sources:
+  - https://github.com/your-org/rate-limiting
+maintainers:
+  - name: your-team

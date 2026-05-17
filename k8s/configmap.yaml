@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rate-limiter-config
+  namespace: rate-limiter
+data:
+  config.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: 9000
+      http_port: 8080
+      strict_security: true   # RATE_LIMIT_HMAC_SECRET injected via k8s/hmac-secret.yaml
+
+    etcd:
+      endpoints:
+        - "http://etcd-0.etcd:2379"
+        - "http://etcd-1.etcd:2379"
+        - "http://etcd-2.etcd:2379"
+      key_prefix: rate-limiting
+
+    rate_limiter:
+      algorithm: token_bucket
+      max_requests: 100
+      window_secs: 1
+      bucket_capacity: 100
+      refill_rate: 10.0
+      leak_rate: 10.0
+      queue_capacity: 100

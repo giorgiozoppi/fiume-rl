@@ -1,0 +1,53 @@
+[package]
+name = "rate-limiting"
+version = "0.1.0"
+edition = "2021"
+
+# cdylib  → Python extension (.so / .pyd) built by maturin
+# rlib    → linked by the server/client binaries via cargo
+[lib]
+name = "rate_limiting"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"
+
+# ── features ──────────────────────────────────────────────────────────────────
+[features]
+# Activated by maturin when building the Python wheel.
+# Brings in pyo3 and tells it to link dynamically against the Python interpreter.
+extension-module = ["dep:pyo3", "pyo3/extension-module"]
+
+# ── dependencies ──────────────────────────────────────────────────────────────
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+flatbuffers = "24.3.25"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+anyhow = "1"
+thiserror = "1"
+async-trait = "0.1"
+
+# HTTP server (rate-limit headers)
+axum = { version = "0.8", features = ["json"] }
+tower-http = { version = "0.6", features = ["trace"] }
+
+# Distributed state via etcd
+etcd-client = "0.14"
+
+# HMAC-SHA256 for X-Rate-Hmac strict-security mode
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Optional: only compiled when building the Python extension with maturin.
+pyo3 = { version = "0.22", optional = true }

@@ -1,0 +1,21 @@
+# config used by docker-compose (single-node etcd reachable via compose service name).
+# Do not replace config.yaml — that file is used for local bare-metal runs.
+server:
+  host: "0.0.0.0"
+  port: 9000
+  http_port: 8080
+  strict_security: false   # set true + supply RATE_LIMIT_HMAC_SECRET env var to enable
+
+etcd:
+  endpoints:
+    - "http://etcd:2379"
+  key_prefix: rate-limiting
+
+rate_limiter:
+  algorithm: token_bucket
+  max_requests: 10
+  window_secs: 1
+  bucket_capacity: 10
+  refill_rate: 2.0
+  leak_rate: 2.0
+  queue_capacity: 10
