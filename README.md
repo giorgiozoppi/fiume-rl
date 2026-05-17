@@ -1,4 +1,4 @@
-# rlim — Distributed Rate Limiter
+# fiume-rl — Distributed Rate Limiter
 
 A high-performance, distributed rate limiter written in Rust. It exposes both a
 binary FlatBuffers TCP interface and a standards-compliant HTTP API, and supports
